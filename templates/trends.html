@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-4">Threat Trends & Visualization</h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Threat Severity Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="severityChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Daily Lookup Trends</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="trendsChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top Reported Indicators</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="topIndicatorsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Severity distribution chart
+    const severityCtx = document.getElementById('severityChart').getContext('2d');
+    new Chart(severityCtx, {
+        type: 'pie',
+        data: {
+            labels: ['High', 'Medium', 'Low'],
+            datasets: [{
+                data: [{{ severity_counts.High }}, {{ severity_counts.Medium }}, {{ severity_counts.Low }}],
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(253, 126, 20, 0.7)',
+                    'rgba(255, 193, 7, 0.7)'
+                ],
+                borderColor: [
+                    'rgb(220, 53, 69)',
+                    'rgb(253, 126, 20)',
+                    'rgb(255, 193, 7)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            }
+        }
+    });
+    
+    // Daily trends chart
+    const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+    const dailyData = {{ daily_counts|tojson }};
+    const dates = Object.keys(dailyData).sort();
+    const values = dates.map(date => dailyData[date]);
+    
+    new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Lookups per Day',
+                data: values,
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Top indicators chart
+    const topIndicatorsCtx = document.getElementById('topIndicatorsChart').getContext('2d');
+    const indicatorsData = {{ top_indicators|tojson }};
+    const indicators = Object.keys(indicatorsData);
+    const counts = indicators.map(indicator => indicatorsData[indicator]);
+    
+    new Chart(topIndicatorsCtx, {
+        type: 'bar',
+        data: {
+            labels: indicators,
+            datasets: [{
+                label: 'Number of Reports',
+                data: counts,
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgb(54, 162, 235)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
