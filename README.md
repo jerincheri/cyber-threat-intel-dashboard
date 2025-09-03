@@ -3,16 +3,19 @@ cat > README.md << 'EOF'
 
 A Flask-based web dashboard for cyber threat intelligence analysis with API integrations for VirusTotal, AbuseIPDB, and AlienVault OTX.
 
+![CTI Dashboard](https://img.shields.io/badge/Flask-2.3.3-green) ![MongoDB](https://img.shields.io/badge/MongoDB-5.0-green) ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
+
 ## Features
 
-- Threat indicator lookup (IP, domain, hash)
-- Multi-source threat intelligence (VirusTotal, AbuseIPDB, AlienVault OTX)
-- Visualizations with Chart.js
-- Export functionality (CSV, PDF)
-- IOC tagging system
-- MongoDB storage
-- Responsive design with Bootstrap 5
-- Dark/light mode toggle
+- 🔍 **Threat Lookup**: Search for IP addresses, domains, and file hashes
+- 📊 **Multi-source Intelligence**: Integrates VirusTotal, AbuseIPDB, and AlienVault OTX
+- 📈 **Data Visualization**: Interactive charts with Chart.js
+- 📁 **Export Functionality**: Download reports in CSV and PDF formats
+- 🏷️ **IOC Tagging System**: Categorize indicators with custom tags
+- 💾 **MongoDB Storage**: Persistent data storage
+- 📱 **Responsive Design**: Works on desktop and mobile
+- 🌙 **Dark/Light Mode**: Toggle between themes
+- 🎨 **Bootstrap 5 UI**: Modern, professional interface
 
 ## Installation
 
