@@ -3,86 +3,166 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <h1 class="mb-4">Threat Intelligence Dashboard</h1>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-4 mb-3">
-        <div class="card stats-card text-center h-100">
-            <div class="card-body">
-                <h5 class="card-title">Total Lookups</h5>
-                <h2 class="display-4 text-primary">{{ stats.total_lookups }}</h2>
-                <p class="card-text">Threat intelligence queries performed</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card stats-card text-center h-100">
-            <div class="card-body">
-                <h5 class="card-title">High Severity Threats</h5>
-                <h2 class="display-4 text-danger">{{ stats.high_severity }}</h2>
-                <p class="card-text">Critical threats detected</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card stats-card text-center h-100">
-            <div class="card-body">
-                <h5 class="card-title">Last Updated</h5>
-                <h4 class="text-info">{{ stats.last_updated }}</h4>
-                <p class="card-text">Latest data refresh</p>
-            </div>
-        </div>
+        <h1 class="mb-4">Threat Lookup</h1>
+        <p class="lead">Search for threat intelligence data on IP addresses, domains, or file hashes</p>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-12">
+    <div class="col-lg-8 mx-auto">
         <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Recent Threat Lookups</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Threat Intelligence Search</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/lookup">
+                    <div class="mb-3">
+                        <label for="indicator" class="form-label">Enter IP Address, Domain, or Hash</label>
+                        <input type="text" class="form-control form-control-lg" id="indicator" name="indicator" 
+                               placeholder="e.g., 8.8.8.8, google.com, or 44d88612fea8a8f36de82e1278abb02f" required>
+                        <div class="form-text">Enter a valid IP address, domain name, or file hash (MD5, SHA1, SHA256)</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-search me-2"></i>Lookup Threat Intelligence
+                    </button>
+                </form>
+                
+                {% if error %}
+                <div class="alert alert-danger mt-3" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if results %}
+        <div class="card mt-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Results for: <code>{{ indicator }}</code></h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
-                                <th>Indicator</th>
-                                <th>Threat Level</th>
                                 <th>Source</th>
+                                <th>Threat Level</th>
                                 <th>Details</th>
-                                <th>Timestamp</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for lookup in recent_lookups %}
-                            <tr class="severity-{{ lookup.threat_level|lower }}">
-                                <td>{{ lookup.indicator }}</td>
+                            {% for result in results %}
+                            <tr class="severity-{{ result.threat_level|lower }}">
+                                <td><strong>{{ result.source }}</strong></td>
                                 <td>
-                                    {% if lookup.threat_level == 'High' %}
+                                    {% if result.threat_level == 'High' %}
                                     <span class="badge bg-danger">High</span>
-                                    {% elif lookup.threat_level == 'Medium' %}
+                                    {% elif result.threat_level == 'Medium' %}
                                     <span class="badge bg-warning">Medium</span>
                                     {% else %}
                                     <span class="badge bg-info">Low</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ lookup.source }}</td>
-                                <td>{{ lookup.details }}</td>
-                                <td>{{ lookup.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ result.details }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                {% if not recent_lookups %}
-                <div class="text-center py-4">
-                    <p class="text-muted">No recent lookups found. <a href="/lookup">Perform a threat lookup</a> to get started.</p>
+                
+                <div class="mt-4">
+                    <h6><i class="bi bi-tags me-2"></i>Tags for this indicator:</h6>
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control" id="tagInput" placeholder="e.g., phishing, malware, botnet">
+                        <button class="btn btn-outline-primary" type="button" onclick="addTag('{{ indicator }}')">
+                            <i class="bi bi-plus-circle me-1"></i>Add Tag
+                        </button>
+                    </div>
+                    <div id="tagList" class="d-flex flex-wrap gap-2">
+                        {% if tags %}
+                            {% for tag in tags %}
+                            <span class="badge bg-secondary">{{ tag }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">No tags yet</span>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endif %}
             </div>
         </div>
+        {% else %}
+        <div class="card mt-4">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-search display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">No search performed yet</h4>
+                <p class="text-muted">Enter an indicator above to lookup threat intelligence data.</p>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load tags for the current indicator
+    {% if indicator %}
+    function loadTags() {
+        fetch('/get_tags/{{ indicator }}')
+            .then(response => response.json())
+            .then(data => {
+                const tagList = document.getElementById('tagList');
+                if (data.tags && data.tags.length > 0) {
+                    tagList.innerHTML = data.tags.map(tag => 
+                        `<span class="badge bg-secondary">${tag}</span>`
+                    ).join('');
+                } else {
+                    tagList.innerHTML = '<span class="text-muted">No tags yet</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading tags:', error);
+            });
+    }
+    
+    // Load tags when page loads
+    document.addEventListener('DOMContentLoaded', loadTags);
+    {% endif %}
+    
+    // Add a tag to an indicator
+    function addTag(indicator) {
+        const tagInput = document.getElementById('tagInput');
+        const tag = tagInput.value.trim();
+        
+        if (!tag) {
+            alert('Please enter a tag name');
+            return;
+        }
+        
+        fetch('/add_tag', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                indicator: indicator,
+                tag: tag
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload tags
+                loadTags();
+                tagInput.value = '';
+            } else {
+                alert('Error adding tag: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error adding tag:', error);
+            alert('Error adding tag. Please try again.');
+        });
+    }
+</script>
 {% endblock %}

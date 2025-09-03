@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_pymongo import PyMongo
 from datetime import datetime
@@ -13,6 +12,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 import threading
 import time
+from bson import ObjectId
 
 app = Flask(__name__)
 
@@ -41,11 +41,24 @@ def update_dashboard_stats():
     dashboard_stats["high_severity"] = high_severity
     dashboard_stats["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+# Helper function to get tags for an indicator
+def get_tags_for_indicator(indicator):
+    lookups = list(mongo.db.threat_lookups.find({'indicator': indicator}))
+    tags = set()
+    
+    for lookup in lookups:
+        if 'tags' in lookup:
+            tags.update(lookup['tags'])
+    
+    return list(tags)
+
 # Home/Dashboard route
 @app.route('/')
 def index():
     update_dashboard_stats()
-    return render_template('index.html', stats=dashboard_stats)
+    # Get recent lookups for the dashboard
+    recent_lookups = list(mongo.db.threat_lookups.find().sort('timestamp', -1).limit(5))
+    return render_template('index.html', stats=dashboard_stats, recent_lookups=recent_lookups)
 
 # Threat lookup route
 @app.route('/lookup', methods=['GET', 'POST'])
@@ -64,10 +77,14 @@ def threat_lookup():
             result['indicator'] = indicator
             mongo.db.threat_lookups.insert_one(result)
         
+        # Get tags for this indicator
+        tags = get_tags_for_indicator(indicator)
+        
         # Update dashboard stats
         update_dashboard_stats()
         
-        return render_template('lookup.html', results=results, indicator=indicator, stats=dashboard_stats)
+        return render_template('lookup.html', results=results, indicator=indicator, 
+                              tags=tags, stats=dashboard_stats)
     
     return render_template('lookup.html', stats=dashboard_stats)
 
@@ -107,7 +124,7 @@ def query_threat_apis(indicator):
     
     # AbuseIPDB API
     try:
-        if '.' in indicator:  # Likely an IP address
+        if '.' in indicator and not any(c.isalpha() for c in indicator):  # Likely an IP address
             abuse_url = "https://api.abuseipdb.com/api/v2/check"
             headers = {
                 'Key': ABUSEIPDB_API_KEY,
@@ -139,7 +156,13 @@ def query_threat_apis(indicator):
     
     # AlienVault OTX API
     try:
-        otx_url = f"https://otx.alienvault.com/api/v1/indicators/{indicator_type(indicator)}/{indicator}/general"
+        indicator_type = "domain"
+        if '.' in indicator and not any(c.isalpha() for c in indicator.split('.')[-1]):
+            indicator_type = "IPv4"
+        elif len(indicator) in [32, 40, 64]:  # MD5, SHA1, SHA256 hashes
+            indicator_type = "file"
+            
+        otx_url = f"https://otx.alienvault.com/api/v1/indicators/{indicator_type}/{indicator}/general"
         headers = {'X-OTX-API-KEY': ALIENVAULT_API_KEY}
         response = requests.get(otx_url, headers=headers)
         
@@ -165,17 +188,6 @@ def query_threat_apis(indicator):
         print(f"AlienVault API error: {e}")
     
     return results
-
-# Determine indicator type
-def indicator_type(indicator):
-    if '.' in indicator and not any(c.isalpha() for c in indicator.split('.')[-1]):
-        return "IPv4"
-    elif '.' in indicator and any(c.isalpha() for c in indicator):
-        return "domain"
-    elif len(indicator) == 64:
-        return "file"
-    else:
-        return "hostname"
 
 # Trends and visualization route
 @app.route('/trends')
@@ -290,6 +302,13 @@ def export_data():
     
     return "Invalid format specified", 400
 
+# Export page route
+@app.route('/export-page')
+def export_page():
+    # Get recent lookups for the display
+    recent_lookups = list(mongo.db.threat_lookups.find().sort('timestamp', -1).limit(10))
+    return render_template('export.html', recent_lookups=recent_lookups, stats=dashboard_stats)
+
 # API endpoint to add tags
 @app.route('/add_tag', methods=['POST'])
 def add_tag():
@@ -310,14 +329,8 @@ def add_tag():
 # API endpoint to get tags
 @app.route('/get_tags/<indicator>')
 def get_tags(indicator):
-    lookups = list(mongo.db.threat_lookups.find({'indicator': indicator}))
-    tags = set()
-    
-    for lookup in lookups:
-        if 'tags' in lookup:
-            tags.update(lookup['tags'])
-    
-    return jsonify({'tags': list(tags)})
+    tags = get_tags_for_indicator(indicator)
+    return jsonify({'tags': tags})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -48,6 +48,10 @@
         .stats-card:hover {
             transform: translateY(-5px);
         }
+        
+        .nav-link.active {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -62,16 +66,16 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/lookup">Threat Lookup</a>
+                        <a class="nav-link {% if request.path == '/lookup' %}active{% endif %}" href="/lookup">Threat Lookup</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/trends">Trends</a>
+                        <a class="nav-link {% if request.path == '/trends' %}active{% endif %}" href="/trends">Trends</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/export">Export</a>
+                        <a class="nav-link {% if request.path == '/export-page' %}active{% endif %}" href="/export-page">Export</a>
                     </li>
                 </ul>
                 <div class="form-check form-switch theme-toggle">
